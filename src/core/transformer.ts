@@ -39,6 +39,7 @@ export default function transformer(file: any, api: any, options: Partial<Config
 
   const getOrGenerateKey = (text: string) => {
       const trimmed = text.trim();
+      // Industry Standard: exact match check first
       for (const [k, v] of Object.entries(extractedKeys)) {
           if (v === trimmed) return k;
       }
@@ -50,24 +51,20 @@ export default function transformer(file: any, api: any, options: Partial<Config
       return key;
   };
 
+  // PASS 1: JSX Text
   root.find(j.JSXText).forEach((path: any) => {
-    const originalValue = path.node.value;
-    const text = originalValue.trim();
+    const text = path.node.value.trim();
     if (shouldIgnore(text)) return;
-
     const key = getOrGenerateKey(text);
-    const leadingSpace = originalValue.match(/^\s+/)?.[0] || '';
-    const trailingSpace = originalValue.match(/\s+$/)?.[0] || '';
-
-    const tCall = j.jsxExpressionContainer(
-        j.callExpression(j.identifier('t'), [j.stringLiteral(key)])
-    );
-
-    if (leadingSpace || trailingSpace) {
-        const nodes: any[] = [];
-        if (leadingSpace) nodes.push(j.jsxText(leadingSpace));
+    const leading = path.node.value.match(/^\s+/)?.[0] || '';
+    const trailing = path.node.value.match(/\s+$/)?.[0] || '';
+    const tCall = j.jsxExpressionContainer(j.callExpression(j.identifier('t'), [j.stringLiteral(key)]));
+    
+    if (leading || trailing) {
+        const nodes = [];
+        if (leading) nodes.push(j.jsxText(leading));
         nodes.push(tCall);
-        if (trailingSpace) nodes.push(j.jsxText(trailingSpace));
+        if (trailing) nodes.push(j.jsxText(trailing));
         j(path).replaceWith(nodes);
     } else {
         j(path).replaceWith(tCall);
@@ -75,103 +72,74 @@ export default function transformer(file: any, api: any, options: Partial<Config
     hasChanges = true;
   });
 
+  // PASS 2: Attributes
   root.find(j.JSXAttribute).forEach((path: any) => {
-    const attrName = path.node.name.name;
-    if (typeof attrName === 'string' && (extraction.attributes || []).includes(attrName)) {
-        const value = path.node.value;
-        if (value && value.type === 'StringLiteral') {
-            const text = value.value;
-            if (shouldIgnore(text)) return;
-            const key = getOrGenerateKey(text);
-            j(path).replaceWith(
-                j.jsxAttribute(
-                    j.jsxIdentifier(attrName),
-                    j.jsxExpressionContainer(j.callExpression(j.identifier('t'), [j.stringLiteral(key)]))
-                )
-            );
+    const name = path.node.name.name;
+    if (typeof name === 'string' && (extraction.attributes || []).includes(name)) {
+        const val = path.node.value;
+        if (val?.type === 'StringLiteral' && !shouldIgnore(val.value)) {
+            const key = getOrGenerateKey(val.value);
+            j(path).replaceWith(j.jsxAttribute(j.jsxIdentifier(name), j.jsxExpressionContainer(j.callExpression(j.identifier('t'), [j.stringLiteral(key)]))));
             hasChanges = true;
         }
     }
   });
 
+  // PASS 3: Template Literals (Dynamic Strings)
   root.find(j.TemplateLiteral).forEach((path: any) => {
-      let p = path.parent;
-      while (p) {
-          if (p.node.type === 'CallExpression' && p.node.callee.name === 't') return;
-          p = p.parent;
-      }
+      if (path.parent.node.type === 'CallExpression' && path.parent.node.callee.name === 't') return;
 
       const { quasis, expressions } = path.node;
-      let templateStr = '';
+      let raw = '';
       quasis.forEach((q: any, i: number) => {
-          templateStr += q.value.cooked;
-          if (i < expressions.length) templateStr += `{${i}}`;
+          raw += q.value.cooked;
+          if (i < expressions.length) raw += `{${i}}`;
       });
 
-      if (shouldIgnore(templateStr.trim())) return;
+      if (shouldIgnore(raw)) return;
 
-      const key = getOrGenerateKey(templateStr);
-      const tArgs: any[] = [j.stringLiteral(key)];
+      const key = getOrGenerateKey(raw);
+      const args: any[] = [j.stringLiteral(key)];
       if (expressions.length > 0) {
-          const props = expressions.map((expr: any, i: number) => 
-              j.property('init', j.identifier(String(i)), expr)
-          );
-          tArgs.push(j.objectExpression(props));
+          args.push(j.objectExpression(expressions.map((e: any, i: number) => j.property('init', j.identifier(String(i)), e))));
       }
 
-      const tCall = j.callExpression(j.identifier('t'), tArgs);
-      if (['JSXElement', 'JSXFragment', 'JSXExpressionContainer'].includes(path.parent.node.type)) {
-          j(path).replaceWith(tCall);
-      } else {
-          j(path).replaceWith(tCall);
-      }
+      const tCall = j.callExpression(j.identifier('t'), args);
+      j(path).replaceWith(['JSXElement', 'JSXFragment', 'JSXExpressionContainer'].includes(path.parent.node.type) ? tCall : tCall);
       hasChanges = true;
   });
 
+  // PASS 4: Imports & Hooks Injection (Optimized)
   if (hasChanges && !isDryRun) {
-    const imports = root.find(j.ImportDeclaration);
-    const existingI18n = imports.filter((p: any) => p.node.source.value.includes(adapter.i18n));
-    
-    if (existingI18n.size() === 0) {
-        const firstNode = root.find(j.Program).get('body', 0);
-        const isDirective = firstNode.value?.type === 'ExpressionStatement' && 
-                          typeof firstNode.value.expression.value === 'string' &&
-                          firstNode.value.expression.value.startsWith('use ');
-        
-        if (isDirective) j(firstNode).insertAfter(adapter.getImport());
+    if (root.find(j.ImportDeclaration, { source: { value: v => v.includes(adapter.i18n) } }).size() === 0) {
+        const first = root.find(j.Program).get('body', 0);
+        const hasDirective = first.value?.type === 'ExpressionStatement' && typeof first.value.expression.value === 'string' && first.value.expression.value.startsWith('use ');
+        if (hasDirective) j(first).insertAfter(adapter.getImport());
         else root.find(j.Program).get('body', 0).insertBefore(adapter.getImport());
     }
 
-    const componentPaths = [
-        ...root.find(j.FunctionDeclaration).paths(),
-        ...root.find(j.VariableDeclarator, { init: { type: 'ArrowFunctionExpression' } }).paths(),
-        ...root.find(j.ExportDefaultDeclaration, { declaration: { type: 'FunctionExpression' } }).paths()
+    const componentSelectors = [
+        root.find(j.FunctionDeclaration),
+        root.find(j.VariableDeclarator, { init: { type: 'ArrowFunctionExpression' } }),
+        root.find(j.ExportDefaultDeclaration, { declaration: { type: 'FunctionExpression' } })
     ];
 
-    componentPaths.forEach((path: any) => {
-        const node = path.node.init || path.node.declaration || path.node;
-        const body = node.body;
-        if (body?.type === 'BlockStatement') {
-            const usesT = j(body).find(j.CallExpression, { callee: { name: 't' } }).size() > 0;
-            if (!usesT) return;
-
-            const hasHook = j(body).find(j.VariableDeclarator, { id: { name: 't' } }).size() > 0;
-            if (!hasHook) {
-                let insertIdx = 0;
-                for (let i = 0; i < body.body.length; i++) {
-                    const stmt = body.body[i];
-                    if (stmt.type === 'VariableDeclaration' && j(stmt).toSource().includes('use')) {
-                        insertIdx = i + 1;
-                    } else if (insertIdx > 0) break;
+    componentSelectors.forEach(selector => {
+        selector.forEach((path: any) => {
+            const node = path.node.init || path.node.declaration || path.node;
+            if (node.body?.type === 'BlockStatement') {
+                if (j(node.body).find(j.CallExpression, { callee: { name: 't' } }).size() > 0 && j(node.body).find(j.VariableDeclarator, { id: { name: 't' } }).size() === 0) {
+                    let idx = 0;
+                    for (let i = 0; i < node.body.body.length; i++) {
+                        if (node.body.body[i].type === 'VariableDeclaration' && j(node.body.body[i]).toSource().includes('use')) idx = i + 1;
+                        else if (idx > 0) break;
+                    }
+                    node.body.body.splice(idx, 0, j.template.statement([adapter.getHook()]));
                 }
-                body.body.splice(insertIdx, 0, j.template.statement([adapter.getHook()]));
             }
-        }
+        });
     });
   }
 
-  return {
-    source: root.toSource(),
-    keys: extractedKeys
-  };
+  return { source: root.toSource({ quote: 'single' }), keys: extractedKeys };
 }

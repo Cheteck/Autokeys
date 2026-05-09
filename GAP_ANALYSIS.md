@@ -1,46 +1,31 @@
-# 📊 Analyse Détaillée des Gaps & Modernisation Pro — AutoKeys
+# 📊 Analyse Détaillée des Gaps & Modernisation v0.3.0 — Inspired by i18next-cli
 
-## 🎯 État Actuel (v0.2.0 - Major Refactor)
-AutoKeys a été totalement réarchitecturé pour répondre aux exigences de production :
-- ✅ **Moteur AST Multi-Passe** : Extraction et transformation granulaires (JSX, Attributs, Template Literals) via visitors jscodeshift dédiés.
-- ✅ **Configuration Robuste** : Système basé sur Zod et Cosmiconfig (`autokeys.config.js`).
-- ✅ **Namespacing Hiérarchique** : Génération de clés basées sur l'arborescence réelle du projet (`components.auth.login.title`).
-- ✅ **Extensibilité Framework** : Architecture d'adapters prête pour Next.js, React, Vue 3, et Svelte.
-- ✅ **UX CLI Avancée** : Barre de progression, rapports colorés et gestion des backups intégrée.
-- ✅ **Sécurité & Fiabilité** : Filtrage Pro v2 (ignore directives framework, paths, technique) et système de backup automatique.
-
----
-
-## 🔍 Gaps Résolus
-
-### 1. 🏗️ Robustesse
-- **Visitor Pattern** : Passage d'un remplacement simpliste à une analyse sémantique par l'AST.
-- **Injection Intelligente** : Les hooks et imports sont injectés uniquement si nécessaire et au bon endroit (après les directives "use client").
-
-### 2. 🤖 Flexibilité
-- **Custom Attributes** : Possibilité de configurer quels attributs extraire (ex: `translateProps: ['label']`).
-- **Strategy Selection** : Choix entre clés lisibles (slug) ou déterministes (hash).
-
-### 3. 🛡️ Sécurité
-- **Atomicité** : Prévention de la corruption des fichiers via backups systématiques.
-- **Validation** : Le scanner Pro v2 réduit drastiquement les faux positifs techniques.
+## 🎯 État Actuel (v0.3.0)
+AutoKeys a franchi une nouvelle étape en adoptant les standards de l'industrie (i18next-cli, i18next-parser) :
+- ✅ **Architecture Orientée Lexer** : Séparation claire entre l'extraction (Lexers) et la transformation AST.
+- ✅ **Gestion de Catalogue i18next** : Tri alphabétique et archivage des clés inutilisées dans `locale_old.json`.
+- ✅ **Support des Clés Dynamiques** : Extraction via commentaires `/* i18next-extract-mark: key */`.
+- ✅ **Moteur de Filtrage Avancé** : Scanner Pro v3 avec détection sémantique améliorée.
+- ✅ **Namespacing Hiérarchique** : Clés structurées selon l'arborescence projet par défaut.
 
 ---
 
-## 🚀 Roadmap Future (v0.3.0+)
+## 🔍 Améliorations vs i18next-cli
+- **Différence Majeure** : Là où i18next-cli se concentre souvent sur l'extraction, AutoKeys propose une **transformation interactive du code source** (injection automatique des appels `t()`, hooks et imports).
+- **Modernité** : Support natif et optimisé pour Next.js 16 (App Router) et les directives "use client".
 
-### A. Intelligence Artificielle (Levier : Context)
-- **Action** : Utiliser un petit modèle local (type Transformers.js) pour suggérer des clés plus sémantiques.
-- **Bénéfice** : Passer de "login_button" à "submit_user_credentials".
+---
 
-### B. Internationalisation ICU
-- **Action** : Support natif des pluriels complexes et du genre via le format ICU.
-- **Bénéfice** : Support total des traductions professionnelles.
+## 🚀 Roadmap Future
 
-### C. Dashboard Web
-- **Action** : Exporter les résultats du Playground vers une interface de management des clés.
+### A. Extensibilité Lexer
+- **Action** : Ajouter des Lexers pour HTML pur, Vue SFC et Svelte.
+- **Bénéfice** : Devenir l'outil universel de migration i18n.
+
+### B. Internationalisation ICU & Pluriels
+- **Action** : Détecter automatiquement les patterns de pluriels et proposer des clés adaptées (`key_one`, `key_other`).
 
 ---
 
 ## 🏁 Conclusion
-La v0.2.0 marque le passage d'AutoKeys d'un utilitaire expérimental à un outil de codemod professionnel. Le Playground Next.js 16 sert désormais de banc d'essai certifié pour toute nouvelle règle d'extraction.
+Avec la v0.3.0, AutoKeys combine la puissance de l'analyse AST (jscodeshift) avec la rigueur de gestion de catalogue d'i18next-cli. C'est l'outil le plus avancé pour automatiser la transition i18n d'une application React/Next.js moderne.
