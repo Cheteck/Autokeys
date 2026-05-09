@@ -1,107 +1,116 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import chalk from 'chalk';
+import { blue, green, yellow, red, gray, bold } from 'colorette';
 import { globSync } from 'glob';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import jscodeshift from 'jscodeshift';
 import transformer from '../core/transformer.js';
-import * as readline from 'node:readline/promises';
+import { loadConfig } from '../config/loader.js';
+import { mergeMessages } from '../core/merger.js';
+import { createBackup } from '../utils/backup.js';
+import ora from 'ora';
+import SingleBar from 'cli-progress';
 
 const program = new Command();
 
 program
   .name('autokeys')
-  .description('i18n automatic key extraction tool')
-  .version('0.1.0');
+  .description('Professional i18n automatic key extraction tool')
+  .version('0.2.0');
 
 program
   .command('transform')
-  .description('Scan and transform source files')
-  .argument('<path>', 'File or directory path')
-  .option('--framework <type>', 'Framework (react|next)', 'next')
-  .option('--i18n <library>', 'i18n library (next-intl|react-i18next)', 'next-intl')
-  .option('--locale <lang>', 'Target locale', 'fr')
-  .option('--outDir <dir>', 'JSON output directory', './messages')
-  .option('--dry-run', 'Show changes without writing to disk', false)
-  .option('--no-namespace', 'Disable key namespacing', false)
-  .option('--interactive', 'Confirm or rename keys manually', false)
+  .description('Scan and transform source files with advanced AST logic')
+  .argument('[path]', 'File or directory path', '.')
+  .option('--config <path>', 'Path to autokeys config file')
+  .option('--dry-run', 'Simulation mode', false)
+  .option('--no-backup', 'Skip creation of .bak files', false)
+  .option('--backup-dir <path>', 'Directory to store backups')
   .action(async (targetPath, options) => {
+    const configSpinner = ora('Loading configuration...').start();
+    const config = await loadConfig(options.config);
+    configSpinner.succeed('Configuration loaded.');
+
     if (options.dryRun) {
-        console.log(chalk.yellow('🚧 DRY RUN MODE - No files will be modified\n'));
-    } else {
-        console.log(chalk.blue('🚀 AutoKeys starting transformation...'));
+        console.log(yellow('\n🚧 DRY RUN MODE - No files will be modified\n'));
     }
 
     const resolvedPath = path.resolve(targetPath);
-    const pattern = resolvedPath + '/**/*.{js,ts,jsx,tsx}';
-    const files = globSync(pattern, {
-        ignore: ['**/node_modules/**', '**/dist/**']
+    let isDirectory = false;
+    try {
+        const stats = await fs.stat(resolvedPath);
+        isDirectory = stats.isDirectory();
+    } catch {
+        console.error(red(`Error: Path ${resolvedPath} not found.`));
+        process.exit(1);
+    }
+
+    const files = globSync(isDirectory ? config.include[0] : resolvedPath, {
+        cwd: isDirectory ? resolvedPath : process.cwd(),
+        ignore: config.exclude,
+        absolute: true
     });
 
-    console.log(chalk.gray(`Found ${files.length} files to scan.`));
+    if (files.length === 0) {
+        console.log(yellow('No files found matching the patterns.'));
+        return;
+    }
 
-    const fullOutDir = path.resolve(options.outDir);
-    const localePath = path.join(fullOutDir, `${options.locale}.json`);
+    console.log(blue(`🔍 Found ${files.length} files to process.`));
+
+    const progress = new (SingleBar as any).SingleBar({
+        format: 'Processing |' + blue('{bar}') + '| {percentage}% || {value}/{total} Files || {file}',
+        barCompleteChar: '\u2588',
+        barIncompleteChar: '\u2591',
+        hideCursor: true
+    });
+    
+    progress.start(files.length, 0, { file: '' });
+
+    const allExtractedKeys: Record<string, string> = {};
+    const messagesPath = path.resolve(config.outDir, `${config.locale}.json`);
     let existingMessages = {};
     try {
-        const data = await fs.readFile(localePath, 'utf-8');
-        existingMessages = JSON.parse(data);
+        existingMessages = JSON.parse(await fs.readFile(messagesPath, 'utf-8'));
     } catch {}
-
-    const allKeys: Record<string, string> = {};
-    const rl = options.interactive ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null;
 
     for (const file of files) {
       try {
+        progress.update({ file: path.basename(file) });
         const source = await fs.readFile(file, 'utf-8');
-        
-        // Pass a custom callback for interactive key confirmation if needed
-        // For simplicity in this transformer architecture, we'll run a "pre-scan" or handle it in transformer
-        // But for now, let's keep it simple: transformer does the work, we report.
-        
         const result = transformer(
           { source, path: file },
           { jscodeshift: (jscodeshift as any).withParser('tsx'), stats: () => {} },
-          { ...options, existingMessages }
+          { ...config, isDryRun: options.dryRun, existingMessages }
         );
 
         if (source !== result.source) {
-          let shouldWrite = !options.dryRun;
-          
-          if (options.interactive && rl) {
-              console.log(chalk.cyan(`\nFile: ${file}`));
-              for (const [k, v] of Object.entries(result.keys)) {
-                  console.log(chalk.gray(`  → Suggesting key [${k}] for "${v}"`));
+          if (!options.dryRun) {
+              if (config.security.backup && !options.noBackup) {
+                  await createBackup(file, source, options.backupDir || config.security.backupDir);
               }
-              const answer = await rl.question(chalk.yellow('  Accept changes? (y/n/skip): '));
-              if (answer.toLowerCase() !== 'y') shouldWrite = false;
-          }
-
-          if (shouldWrite) {
               await fs.writeFile(file, result.source);
-              console.log(chalk.green(`✔ Processed ${file}`));
-              Object.assign(allKeys, result.keys);
-          } else if (options.dryRun) {
-              console.log(chalk.yellow(`[Dry-Run] Would modify ${file}`));
-              Object.assign(allKeys, result.keys);
           }
+          Object.assign(allExtractedKeys, result.keys);
         }
       } catch (err: any) {
-        console.error(chalk.red(`❌ Error in ${file}:`), err.message);
+        // Log error later or in a report to not break progress bar
       }
+      progress.increment();
     }
 
-    if (rl) rl.close();
+    progress.stop();
 
-    if (Object.keys(allKeys).length > 0 && !options.dryRun) {
-        await fs.mkdir(fullOutDir, { recursive: true });
-        const merged = { ...existingMessages, ...allKeys };
-        await fs.writeFile(localePath, JSON.stringify(merged, null, 2));
-        console.log(chalk.blue(`🔑 Extracted ${Object.keys(allKeys).length} keys to ${localePath}`));
+    if (Object.keys(allExtractedKeys).length > 0 && !options.dryRun) {
+        const finalPath = await mergeMessages(config.outDir, config.locale, allExtractedKeys);
+        console.log(green(`\n✨ Successfully extracted ${Object.keys(allExtractedKeys).length} new keys.`));
+        console.log(gray(`📍 Messages saved to: ${finalPath}`));
+    } else if (Object.keys(allExtractedKeys).length > 0 && options.dryRun) {
+        console.log(yellow(`\n📝 Dry-run: Would have extracted ${Object.keys(allExtractedKeys).length} keys.`));
     }
 
-    console.log(chalk.bold.green('\n✨ Done!'));
+    console.log(bold(green('\n🏁 Done!')));
   });
 
 program.parse();

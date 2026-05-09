@@ -1,27 +1,40 @@
-import { generateKey } from '../utils/slugify.js';
-
 /**
- * Filter to ignore technical strings
+ * Professional Scanner v2
+ * Advanced filtering for technical strings
  */
 export function shouldIgnore(text: string): boolean {
-  if (!text || text.length < 2) return true;
+  if (!text) return true;
   
-  // Ignore URLs
-  if (/^https?:\/\//.test(text)) return true;
+  const trimmed = text.trim();
   
-  // Ignore purely numerical/technical IDs
-  if (/^[a-f0-9-]{8,}$/.test(text)) return true;
+  // 1. Minimum length (ignore single chars/empty)
+  if (trimmed.length < 2) return true;
   
-  // Ignore CSS classes/selectors (rough check)
-  if (text.startsWith('.') || text.startsWith('#')) return true;
+  // 2. Technical: purely numeric
+  if (/^\d+$/.test(trimmed)) return true;
 
-  // Ignore common technical words
-  const blacklist = ['undefined', 'null', 'NaN', 'true', 'false', 'POST', 'GET', 'utf-8'];
-  if (blacklist.includes(text)) return true;
+  // 3. Technical: URLs and paths
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  if (/^[\/\.][\w\/\.-]+\.\w+$/.test(trimmed)) return true; // File paths
+  
+  // 4. Technical: IDs / UUIDs / Hex
+  if (/^[a-f0-9-]{8,}$/i.test(trimmed)) return true;
+  if (/^0x[a-f0-9]+$/i.test(trimmed)) return true;
+
+  // 5. Technical: Selectors / Symbols
+  if (/^[.#\[\]{}()>+~^$|]+/.test(trimmed)) return true;
+
+  // 6. Keywords / Diresctives
+  const blacklist = [
+    'undefined', 'null', 'nan', 'true', 'false', 
+    'post', 'get', 'utf-8', 'application/json',
+    'localhost', 'env', 'node_modules', 'public',
+    'use client', 'use server', 'content-type'
+  ];
+  if (blacklist.includes(trimmed.toLowerCase())) return true;
+
+  // 7. Code-like: CamelCase or snake_case without spaces (likely vars)
+  if (!trimmed.includes(' ') && trimmed.length > 8 && (/([a-z][A-Z])/.test(trimmed) || /_/.test(trimmed))) return true;
 
   return false;
-}
-
-export function extractText(content: string) {
-  // This will be used by jscodeshift in the transform step
 }

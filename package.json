@@ -1,6 +1,6 @@
 {
   "name": "@ijideals/autokeys",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "bin": {
     "autokeys": "./dist/cli/index.js"
@@ -20,6 +20,7 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "start": "node dist/cli/index.js"
   },
   "dependencies": {
@@ -29,20 +30,23 @@
     "jscodeshift": "^0.15.2",
     "recast": "^0.23.6",
     "slugify": "^1.6.6",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "cosmiconfig": "^9.0.1",
+    "pino": "^10.3.1",
+    "colorette": "^2.0.20",
+    "cli-progress": "^3.12.0",
+    "ora": "^9.4.0"
   },
   "devDependencies": {
     "@types/jscodeshift": "^0.11.11",
     "@types/node": "^22.19.17",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.5",
+    "@types/cosmiconfig": "^6.0.3"
   },
   "engines": {
     "node": ">=18"
   },
-  "description": "IJIDeals Autokeys - Auto-generate keys and slugs",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ijideals/ijideals-echos"
-  },
+  "description": "IJIDeals Autokeys - Professional auto-generate keys and slugs",
   "license": "MIT"
 }
