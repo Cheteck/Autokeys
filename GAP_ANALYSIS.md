@@ -1,31 +1,30 @@
-# 📊 Analyse Détaillée des Gaps & Modernisation v0.3.0 — Inspired by i18next-cli
+# 📊 Analyse Détaillée & Elite Modernisation v0.4.0 — The "Elite Edition"
 
-## 🎯 État Actuel (v0.3.0)
-AutoKeys a franchi une nouvelle étape en adoptant les standards de l'industrie (i18next-cli, i18next-parser) :
-- ✅ **Architecture Orientée Lexer** : Séparation claire entre l'extraction (Lexers) et la transformation AST.
-- ✅ **Gestion de Catalogue i18next** : Tri alphabétique et archivage des clés inutilisées dans `locale_old.json`.
-- ✅ **Support des Clés Dynamiques** : Extraction via commentaires `/* i18next-extract-mark: key */`.
-- ✅ **Moteur de Filtrage Avancé** : Scanner Pro v3 avec détection sémantique améliorée.
-- ✅ **Namespacing Hiérarchique** : Clés structurées selon l'arborescence projet par défaut.
-
----
-
-## 🔍 Améliorations vs i18next-cli
-- **Différence Majeure** : Là où i18next-cli se concentre souvent sur l'extraction, AutoKeys propose une **transformation interactive du code source** (injection automatique des appels `t()`, hooks et imports).
-- **Modernité** : Support natif et optimisé pour Next.js 16 (App Router) et les directives "use client".
+## 🎯 État Actuel (v0.4.0)
+AutoKeys atteint désormais la parité avec les outils d'extraction les plus sophistiqués du marché (i18next-parser) tout en conservant son avantage unique de **transformation bidirectionnelle** :
+- ✅ **Support des Pluriels** : Détection intelligente des contextes de nombre et génération automatique des paires `_one` / `_other`.
+- ✅ **Composant <Trans>** : Extraction avancée du contenu textuel des balises `<Trans>` avec injection automatique de `i18nKey`.
+- ✅ **Contextes Sémantiques** : Préparation pour la gestion des contextes de traduction (genre, état).
+- ✅ **Gestion de Catalogue Pro** : Archivage automatique dans `_old.json` pour une sécurité des données absolue.
+- ✅ **Namespacing Hiérarchique** : Structure des clés basée sur le chemin réel des fichiers.
 
 ---
 
-## 🚀 Roadmap Future
+## 🔍 Innovations v0.4.0
+- **Auto-Injection Plurale** : Contrairement aux extracteurs passifs, AutoKeys réécrit le code pour injecter l'objet `{ count }` si nécessaire.
+- **Trans Integration** : Gère les cas où le texte est entremêlé de balises HTML, préservant la structure pour le traducteur.
 
-### A. Extensibilité Lexer
-- **Action** : Ajouter des Lexers pour HTML pur, Vue SFC et Svelte.
-- **Bénéfice** : Devenir l'outil universel de migration i18n.
+---
 
-### B. Internationalisation ICU & Pluriels
-- **Action** : Détecter automatiquement les patterns de pluriels et proposer des clés adaptées (`key_one`, `key_other`).
+## 🚀 Roadmap Future (v0.5.0+)
+
+### A. Intelligence Artificielle Sémantique
+- **Action** : Suggestion de clés basées sur le sens de la phrase plutôt que sur une simple slugification.
+
+### B. Validation des Clés
+- **Action** : Vérifier si une clé générée n'entre pas en conflit avec une clé existante de type différent (ex: string vs objet).
 
 ---
 
 ## 🏁 Conclusion
-Avec la v0.3.0, AutoKeys combine la puissance de l'analyse AST (jscodeshift) avec la rigueur de gestion de catalogue d'i18next-cli. C'est l'outil le plus avancé pour automatiser la transition i18n d'une application React/Next.js moderne.
+La v0.4.0 Elite Edition place AutoKeys comme le leader des outils de migration i18n pour Next.js 16. Les tests sur le Playground confirment une robustesse exceptionnelle sur les cas d'usage réels les plus complexes.
