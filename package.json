@@ -1,6 +1,6 @@
 {
   "name": "@ijideals/autokeys",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "type": "module",
   "bin": {
     "autokeys": "./dist/cli/index.js"
@@ -21,6 +21,7 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "lint": "eslint src --ext .ts",
     "start": "node dist/cli/index.js"
   },
   "dependencies": {
@@ -42,11 +43,12 @@
     "@types/node": "^22.19.17",
     "typescript": "^5.9.0",
     "vitest": "^4.1.5",
-    "@types/cosmiconfig": "^6.0.3"
+    "@types/cosmiconfig": "^6.0.3",
+    "@types/cli-progress": "^3.11.6"
   },
   "engines": {
     "node": ">=18"
   },
-  "description": "IJIDeals Autokeys - Professional auto-generate keys and slugs",
+  "description": "IJIDeals Autokeys - Industrial auto-generate i18n keys and source code transformation",
   "license": "MIT"
 }
