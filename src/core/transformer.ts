@@ -12,6 +12,8 @@ export default function transformer(file: any, api: any, options: Partial<Config
   let hasChanges = false;
   const extractedKeys: Record<string, string> = {};
 
+  const technicalAttributes = ['className', 'style', 'id', 'key', 'ref', 'type', 'src', 'href', 'lang', 'width', 'height'];
+
   let prefix = '';
   if (namespacing.enabled) {
       const fullPath = file.path || 'component.tsx';
@@ -28,6 +30,15 @@ export default function transformer(file: any, api: any, options: Partial<Config
       const key = baseKey + suffix;
       extractedKeys[key] = trimmed;
       return key;
+  };
+
+  const isInsideTechnicalAttribute = (path: any) => {
+      let p = path.parent;
+      while (p) {
+          if (p.node.type === 'JSXAttribute' && technicalAttributes.includes(p.node.name.name)) return true;
+          p = p.parent;
+      }
+      return false;
   };
 
   // PASS 1: Trans Component Support
@@ -74,6 +85,8 @@ export default function transformer(file: any, api: any, options: Partial<Config
   // PASS 4: Template Literals
   root.find(j.TemplateLiteral).forEach((path: any) => {
       if (path.parent.node.type === 'CallExpression' && path.parent.node.callee.name === 't') return;
+      if (isInsideTechnicalAttribute(path)) return;
+
       const { quasis, expressions } = path.node;
       let raw = '';
       quasis.forEach((q: any, i: number) => { raw += q.value.cooked; if (i < expressions.length) raw += `{${i}}`; });

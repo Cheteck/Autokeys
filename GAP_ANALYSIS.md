@@ -1,30 +1,18 @@
-# 📊 Analyse Détaillée & Elite Modernisation v0.4.0 — The "Elite Edition"
+# 📊 Analyse Détaillée & Correctifs v0.4.1 — Anti-Pollution CSS
 
-## 🎯 État Actuel (v0.4.0)
-AutoKeys atteint désormais la parité avec les outils d'extraction les plus sophistiqués du marché (i18next-parser) tout en conservant son avantage unique de **transformation bidirectionnelle** :
-- ✅ **Support des Pluriels** : Détection intelligente des contextes de nombre et génération automatique des paires `_one` / `_other`.
-- ✅ **Composant <Trans>** : Extraction avancée du contenu textuel des balises `<Trans>` avec injection automatique de `i18nKey`.
-- ✅ **Contextes Sémantiques** : Préparation pour la gestion des contextes de traduction (genre, état).
-- ✅ **Gestion de Catalogue Pro** : Archivage automatique dans `_old.json` pour une sécurité des données absolue.
-- ✅ **Namespacing Hiérarchique** : Structure des clés basée sur le chemin réel des fichiers.
+## 🎯 État Actuel (v0.4.1)
+AutoKeys a été optimisé pour les projets utilisant intensivement des classes utilitaires (Tailwind CSS, UnoCSS) :
+- ✅ **Protection des Attributs Techniques** : `className`, `style`, `id`, `key`, etc., sont désormais des zones interdites pour l'extraction.
+- ✅ **Filtrage Sémantique CSS** : Le scanner Pro v4 détecte les listes de classes CSS même hors de `className` (ex: dans des variables) en analysant les préfixes et la structure syntaxique.
+- ✅ **Fiabilité Stable** : Plus de pollution de catalogue avec des classes comme `bg-blue-500` ou `flex items-center`.
 
 ---
 
-## 🔍 Innovations v0.4.0
-- **Auto-Injection Plurale** : Contrairement aux extracteurs passifs, AutoKeys réécrit le code pour injecter l'objet `{ count }` si nécessaire.
-- **Trans Integration** : Gère les cas où le texte est entremêlé de balises HTML, préservant la structure pour le traducteur.
-
----
-
-## 🚀 Roadmap Future (v0.5.0+)
-
-### A. Intelligence Artificielle Sémantique
-- **Action** : Suggestion de clés basées sur le sens de la phrase plutôt que sur une simple slugification.
-
-### B. Validation des Clés
-- **Action** : Vérifier si une clé générée n'entre pas en conflit avec une clé existante de type différent (ex: string vs objet).
+## 🔍 Améliorations vs v0.4.0
+- **Résolution du Bug de Pollution** : Suppression radicale des faux positifs liés aux classes CSS.
+- **Support des Template Literals complexes** : Les classes Tailwind dynamiques utilisant des expressions (ternaires) sont désormais protégées.
 
 ---
 
 ## 🏁 Conclusion
-La v0.4.0 Elite Edition place AutoKeys comme le leader des outils de migration i18n pour Next.js 16. Les tests sur le Playground confirment une robustesse exceptionnelle sur les cas d'usage réels les plus complexes.
+AutoKeys v0.4.1 est la version la plus stable pour les développeurs Next.js modernes utilisant Tailwind. Elle garantit que seuls les textes réels destinés à l'utilisateur final sont extraits pour la traduction.
